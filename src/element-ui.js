@@ -1,8 +1,8 @@
 import { h, render, ref, defineComponent } from "vue";
-import { ElButton, ElTag, ElMessage, ElMessageBox, ElSwitch } from "element-plus";
+import { ElButton, ElTag, ElAlert, ElMessageBox, ElSwitch } from "element-plus";
 import "element-plus/es/components/button/style/css";
 import "element-plus/es/components/tag/style/css";
-import "element-plus/es/components/message/style/css";
+import "element-plus/es/components/alert/style/css";
 import "element-plus/es/components/message-box/style/css";
 import "element-plus/es/components/switch/style/css";
 
@@ -68,9 +68,20 @@ export function installElementUI() {
   observer.observe(document.body, { childList: true, subtree: true });
   enhanceControls();
 }
-export function showMessage(message) {
-  ElMessage.closeAll();
-  ElMessage({ message: String(message), duration: 2600, showClose: true });
+export function showMessage(message, type = 'info') {
+  document.querySelectorAll('.system-alert-host').forEach(host => {
+    render(null, host);
+    host.remove();
+  });
+  const host = document.createElement('div');
+  host.className = 'system-alert-host';
+  // An open native dialog is in the top layer; attach there so alerts stay visible.
+  const container = document.querySelector('#system-modal[open]') || document.body;
+  container.append(host);
+  render(h(ElAlert, {
+    title: String(message), type, showIcon: true, center: false,
+    closable: true, onClose: () => { render(null, host); host.remove(); },
+  }), host);
 }
 export async function confirmAction(message) {
   try {

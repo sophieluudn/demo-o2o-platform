@@ -160,8 +160,8 @@ function saveDemoSession() {
     /* Keep the current in-memory session. */
   }
 }
-function toast(message) {
-  showMessage(message);
+function toast(message, type = "info") {
+  showMessage(message, type);
 }
 
 const button = (text, action, cls = "", attrs = "") =>
@@ -341,7 +341,7 @@ function editor(isNew = false, modal = false) {
       const file = el.files[0];
       if (!file) return;
       if (file.size > 2 * 1024 * 1024) {
-        toast("請選擇小於 2 MB 的圖片");
+        toast("請選擇小於 2 MB 的圖片", "warning");
         el.value = "";
         return;
       }
@@ -399,9 +399,9 @@ function submitProject(e, isNew) {
       closeSystemModal();
       systemPage();
     } else go("projects");
-    toast("專案已儲存");
+    toast("專案已儲存", "success");
   } catch {
-    toast("瀏覽器儲存空間不足，請縮小上傳圖片後重試");
+    toast("瀏覽器儲存空間不足，請縮小上傳圖片後重試", "error");
   }
 }
 function projectURL(p) {
@@ -537,9 +537,9 @@ function render() {
 async function copy(text) {
   try {
     await navigator.clipboard.writeText(text);
-    toast("網址已複製");
+    toast("網址已複製", "success");
   } catch {
-    toast("複製失敗，請手動複製專案網址");
+    toast("複製失敗，請手動複製專案網址", "error");
   }
 }
 function download(content, name, type) {
@@ -633,7 +633,7 @@ document.addEventListener("click", async (e) => {
     createIcons({ icons });
   } else if (a === "report-query") {
     if ($("#from").value > $("#to").value) {
-      toast("開始日期不可晚於結束日期");
+      toast("開始日期不可晚於結束日期", "warning");
       return;
     }
     reportFilters = {
@@ -653,7 +653,7 @@ document.addEventListener("click", async (e) => {
       memberPage();
     } else {
       statsPage();
-      toast("已更新統計查詢（示範資料）");
+      toast("已更新統計查詢（示範資料）", "success");
     }
   } else if (a === "export") {
     const rows = r.startsWith("members")
@@ -690,7 +690,7 @@ document.addEventListener("click", async (e) => {
       "text/csv;charset=utf-8",
     );
     exportHistory.unshift(new Date().toLocaleString("zh-TW"));
-    toast("CSV 已匯出");
+    toast("CSV 已匯出", "success");
   } else if (a === "export-log") {
     toast(
       exportHistory.length ? `最近匯出：${exportHistory[0]}` : "尚無匯出紀錄",
@@ -704,7 +704,7 @@ document.addEventListener("click", async (e) => {
   else if (a === "tracker-add") {
     const id = $("#tracker-id").value.trim();
     if (!id) {
-      toast("請輸入追蹤碼 ID");
+      toast("請輸入追蹤碼 ID", "warning");
       return;
     }
     $(".no-tracker")?.remove();
@@ -1007,7 +1007,7 @@ function persistSystem() {
     localStorage.setItem("o2o-system", JSON.stringify(systemData));
     return true;
   } catch {
-    toast("無法儲存，請確認瀏覽器允許本機儲存且空間足夠");
+    toast("無法儲存，請確認瀏覽器允許本機儲存且空間足夠", "error");
     return false;
   }
 }
@@ -1462,7 +1462,7 @@ function saveSystemForm(e) {
   }
   closeSystemModal();
   systemPage();
-  toast("設定已儲存");
+  toast("設定已儲存", "success");
 }
 async function systemAction(action, b) {
   if (action === "sys-group" && window.innerWidth <= 650) {
@@ -1515,7 +1515,7 @@ async function systemAction(action, b) {
       systemData.users.filter((u) => u.enabled && userHasUnitRole(u, 1))
         .length === 1
     ) {
-      toast("至少需保留一位啟用的系統管理員");
+      toast("至少需保留一位啟用的系統管理員", "warning");
       return;
     }
     if (
@@ -1528,7 +1528,7 @@ async function systemAction(action, b) {
   } else if (action === "sys-delete") {
     if (kind !== "roles" || x.id === 1) return;
     if (systemData.users.some((u) => userHasRole(u, x.id))) {
-      toast("此角色仍有使用者，請先重新指派角色");
+      toast("此角色仍有使用者，請先重新指派角色", "warning");
       return;
     }
     if (!(await confirmAction(`確定刪除角色「${x.name}」？`))) return;
@@ -1539,7 +1539,7 @@ async function systemAction(action, b) {
     return;
   }
   systemPage();
-  toast("設定已更新");
+  toast("設定已更新", "success");
 }
 
 if (/^(members|stats)/.test(route())) limit = 10;

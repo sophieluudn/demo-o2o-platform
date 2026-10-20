@@ -802,19 +802,18 @@ form {
 .stats-table tbody tr {
   background: #fff;
 }
-#toast {
+.system-alert-host {
   position: fixed;
   top: 68px;
   left: 50%;
   transform: translateX(-50%);
-  background: #f0f9eb;
-  color: #397e20;
-  border: 1px solid #c6e9b7;
-  padding: 12px 24px;
-  border-radius: 4px;
-  z-index: 100;
-  box-shadow: 0 3px 12px #0001;
+  width: max-content;
+  max-width: min(560px, calc(100vw - 32px));
+  z-index: 3000;
+  min-width: 0;
 }
+.system-alert-host .el-alert { text-align: left; justify-content: flex-start; }
+.system-alert-host .el-alert__content { min-width: 0; overflow-wrap: anywhere; }
 .empty {
   padding: 60px;
   color: #8793a2;
