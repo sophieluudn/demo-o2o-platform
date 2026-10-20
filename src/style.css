@@ -1317,8 +1317,6 @@ table a, table a:hover, table a:focus-visible { text-decoration: none; }
   color: #465b73;
 }
 .account-dropdown button:hover { color: #409eff; background: #ecf5ff; }
-.login-email-label { display: block; margin-bottom: 8px; text-align: left; color: #fff; line-height: 1.6; }
-.login-card #login-email { width: 100%; margin-bottom: 16px; }
 #app [hidden] { display: none !important; }
 @media (max-width: 650px) {
   .entry-screen.unit-screen { padding: 32px 16px 0; }

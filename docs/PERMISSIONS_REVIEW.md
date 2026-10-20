@@ -30,7 +30,7 @@
 
 ## 正式服務尚需完成
 
-沒有 Google OAuth Client ID、後端身分驗證或授權 API。Email 輸入是標示為示範的帳號對應流程，不能證明帳號持有權。正式部署需由伺服器驗證 Google 身分，對應固定識別與唯一 Email，並對每個讀寫／匯出 API 執行授權。
+登入頁只保留標題與登入按鈕，預設採使用者 ID 1 的 Email 模擬身分，測試可用 sessionStorage 的 `o2o-demo-login-email` 指定帳號。沒有 Google OAuth、後端身分驗證或授權 API，不能證明帳號持有權。正式部署需由伺服器驗證 Google 身分，對應固定識別與唯一 Email，並對每個讀寫／匯出 API 執行授權。
 
 localStorage 可由瀏覽器使用者修改，不提供安全隔離；跨兩個儲存鍵也不具資料庫交易保證。正式服務應採固定單位 ID、唯一約束及交易同步資料。
 

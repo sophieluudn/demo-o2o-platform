@@ -183,13 +183,14 @@ try {
   console.log('PASS: new projects inherit the selected unit');
 
   const login = await newPage(null);
+  assert.equal(await login.locator('#login-email, .login-email-label').count(), 0);
   for (const email of ['unknown@gmail.com', 'off@gmail.com', 'offrole@gmail.com']) {
-    await login.locator('#login-email').fill(email);
+    await login.evaluate(email => sessionStorage.setItem('o2o-demo-login-email', email), email);
     await login.locator('[data-action="demo-login"]').click();
     await login.locator('.el-alert--error').waitFor();
     assert.equal(new URL(login.url()).hash, '#login');
   }
-  await login.locator('#login-email').fill(' AB@GMAIL.COM ');
+  await login.evaluate(email => sessionStorage.setItem('o2o-demo-login-email', email), ' AB@GMAIL.COM ');
   await login.locator('[data-action="demo-login"]').click();
   await login.waitForURL('**#select-unit');
   await login.locator('.unit-button').first().waitFor();
@@ -373,7 +374,7 @@ try {
   noUnitsData.units.forEach(unit => unit.enabled = false);
   const noUnits = await newPage(2, 1, noUnitsData);
   await noUnits.waitForURL('**#login');
-  await noUnits.locator('#login-email').fill('ab@gmail.com');
+  await noUnits.evaluate(email => sessionStorage.setItem('o2o-demo-login-email', email), 'ab@gmail.com');
   await noUnits.locator('[data-action="demo-login"]').click();
   await noUnits.locator('.el-alert--error').waitFor();
   assert.equal(new URL(noUnits.url()).hash, '#login');
@@ -399,7 +400,7 @@ try {
   });
   await revoked.waitForURL('**#login');
   assert.equal(await revoked.locator('#member-rows').count(), 0);
-  await revoked.locator('#login-email').fill('ab@gmail.com');
+  await revoked.evaluate(email => sessionStorage.setItem('o2o-demo-login-email', email), 'ab@gmail.com');
   await revoked.locator('[data-action="demo-login"]').click();
   await revoked.locator('.el-alert--error').waitFor();
   assert.equal(new URL(revoked.url()).hash, '#login');
@@ -431,7 +432,7 @@ try {
   assert.deepEqual(preserved.users[0].assignments, [{ unit: '*', role: 1 }]);
   assert.deepEqual(preserved.users.find(user => user.id === 6).assignments, [{ unit: '*', role: 5 }]);
   assert.equal(preserved.users.length, invalidData.users.length);
-  await invalid.locator('#login-email').fill('admin@gmail.com');
+  await invalid.evaluate(email => sessionStorage.setItem('o2o-demo-login-email', email), 'admin@gmail.com');
   await invalid.locator('[data-action="demo-login"]').click();
   await invalid.locator('[data-unit-id="1"]').click();
   await navigate(invalid, 'system/roles');
