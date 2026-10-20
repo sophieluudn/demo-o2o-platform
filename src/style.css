@@ -1254,3 +1254,72 @@ table a, table a:hover, table a:focus-visible { text-decoration: none; }
   .assignment-unit, .assignment-role { grid-column: 1; }
   .assignment-row .assignment-action { grid-column: 2; grid-row: 1 / span 2; align-self: center; }
 }
+
+/* Login completes with an organization choice before entering the dashboard. */
+.entry-screen.unit-screen {
+  min-height: 100dvh;
+  margin: 0;
+  padding: 138px 24px 0;
+  background: #2d3a4b;
+}
+.unit-card {
+  width: 550px;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 20px 20px 30px;
+  background: #fff;
+  border-radius: 2px;
+}
+.unit-card h1 {
+  margin: 0 0 40px;
+  color: #606266;
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 26px;
+}
+.unit-options { display: flex; flex-direction: column; align-items: center; gap: 20px; }
+.unit-card .unit-button {
+  max-width: 100%;
+  min-height: 40px;
+  height: auto;
+  margin: 0;
+  padding: 11px 24px;
+  border-radius: 24px;
+  background: #409eff;
+  border-color: #409eff;
+  color: #fff;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 18px;
+}
+.unit-card .unit-button:hover { background: #66b1ff; border-color: #66b1ff; }
+.unit-card .unit-button:focus-visible { outline: 2px solid #244469; outline-offset: 4px; }
+.unit-empty { margin: 0; color: #606266; line-height: 1.7; text-align: center; }
+.account-menu { position: relative; }
+.account-menu summary { cursor: pointer; list-style: none; border: 0; }
+.account-menu summary::-webkit-details-marker { display: none; }
+.account-dropdown {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  z-index: 100;
+  width: 140px;
+  padding: 6px 0;
+  border: 1px solid #e6ebf5;
+  border-radius: 4px;
+  background: #fff;
+}
+.header-right .account-dropdown button {
+  display: block;
+  width: 100%;
+  padding: 12px 18px;
+  text-align: left;
+  color: #465b73;
+}
+.account-dropdown button:hover { color: #409eff; background: #ecf5ff; }
+.login-email-label { display: block; margin-bottom: 8px; text-align: left; color: #fff; line-height: 1.6; }
+.login-card #login-email { width: 100%; margin-bottom: 16px; }
+#app [hidden] { display: none !important; }
+@media (max-width: 650px) {
+  .entry-screen.unit-screen { padding: 32px 16px 0; }
+}

@@ -48,7 +48,7 @@ function enhanceControls() {
       "#app button, #system-modal button, #app .status-tag, #system-modal .user-enabled-switch",
     )
     .forEach((source) => {
-      if (source.closest("[data-element-host]")) return;
+      if (source.closest("[data-element-host], .el-message-box")) return;
       // Navigation and editor tools keep their screenshot-specific presentation.
       if (
         source.matches(".nav, .plain, .modal-close") ||
@@ -165,6 +165,7 @@ export async function confirmAction(message) {
       cancelButtonText: "取消",
       type: "warning",
       closeOnClickModal: false,
+      appendTo: document.querySelector("#system-modal[open]") || document.body,
     });
     return true;
   } catch {
