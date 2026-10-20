@@ -1,0 +1,21 @@
+{
+  "name": "o2o-admin-demo",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build && npm run build:preview",
+    "preview": "vite preview --host 127.0.0.1",
+    "build:preview": "node scripts/build-preview.mjs"
+  },
+  "dependencies": {
+    "element-plus": "^2.14.7",
+    "lucide": "^0.468.0",
+    "qrcode": "^1.5.4",
+    "vue": "^3.5.44"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0"
+  }
+}
