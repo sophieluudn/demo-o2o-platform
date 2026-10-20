@@ -353,22 +353,33 @@ tbody tr:nth-child(even) {
 }
 .projects {
   min-width: 1250px;
+  table-layout: fixed;
 }
 .projects td {
   height: 71px;
 }
-.projects th:nth-child(2) {
-  width: 42%;
+.projects th:first-child {
+  width: 64px;
+}
+.projects td:nth-child(2) {
+  overflow-wrap: anywhere;
 }
 .projects th:nth-child(3) {
-  min-width: 100px;
+  width: 110px;
 }
 .projects th:nth-child(4) {
-  min-width: 110px;
+  width: 120px;
 }
 .projects th:nth-child(5),
 .projects th:nth-child(6) {
-  min-width: 100px;
+  width: 120px;
+}
+.projects th:nth-child(n + 7) {
+  width: 80px;
+}
+.projects th:nth-child(n + 7),
+.projects td:nth-child(n + 7) {
+  text-align: center;
 }
 .sort {
   border: 0;
