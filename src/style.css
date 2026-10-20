@@ -1054,6 +1054,11 @@ textarea,
 .user-form:has(#unit-name) .user-field { grid-template-columns: 84px minmax(0, 1fr); }
 .system-table td:last-child { white-space: nowrap; }
 .system-table td:nth-child(2) { text-align: left; }
+.system-table--users .user-row-odd { background: #fff; }
+.system-table--users .user-row-even { background: #fafafa; }
+.system-table--users td { vertical-align: middle; }
+.system-table--users .user-unit,
+.system-table--users .user-unit-role { text-align: left; white-space: nowrap; }
 .status-tag { padding: 4px 9px; border-radius: 3px; font-size: 14px; white-space: nowrap; }
 .status-tag.on { color: #397e20; background: #f0f9eb; }
 .status-tag.off { color: #606266; background: #f0f1f3; }
@@ -1161,7 +1166,6 @@ table a, table a:hover, table a:focus-visible { text-decoration: none; }
 .assignment-row .assignment-add { background: #67C23A; border-color: #67C23A; }
 .assignment-row .assignment-remove { background: #F56C6C; border-color: #F56C6C; }
 .assignment-row .assignment-action:hover { filter: brightness(1.08); }
-.assignment-value { display: block; line-height: 24px; white-space: nowrap; }
 .entry-screen.login-screen {
   display: grid;
   place-items: center;

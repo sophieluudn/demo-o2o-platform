@@ -776,7 +776,6 @@ window.addEventListener("hashchange", () => {
   page = 1;
   systemQuery = "";
   systemUnit = "all";
-  systemRole = "all";
   systemStatus = "all";
   systemEdit = null;
   if (/^(members|stats)/.test(route())) {
@@ -952,13 +951,17 @@ const userHasUnitRole = (user, roleId) =>
         (role) => role.id === roleId && role.unit === assignment.unit,
       ),
   );
-const assignmentSummary = (user, field) =>
-  userAssignments(user)
-    .map(
-      (assignment) =>
-        `<span class="assignment-value">${esc(field === "unit" ? assignment.unit : systemData.roles.find((role) => role.id === assignment.role)?.name || "未指派")}</span>`,
-    )
-    .join("");
+const userTableRows = (user, index) => {
+  const assignments = userAssignments(user).length
+    ? userAssignments(user)
+    : [{ unit: user.unit || "未指派", role: user.role }];
+  const units = assignments.map((assignment) => esc(assignment.unit)).join("<br>");
+  const roles = assignments.map((assignment) => {
+    const role = systemData.roles.find((role) => role.id === assignment.role);
+    return esc(role?.name || "未指派");
+  }).join("<br>");
+  return `<tr class="user-assignment-row ${index % 2 ? "user-row-even" : "user-row-odd"}"><td>${esc(user.id)}</td><td><a href="#system/users" class="user-name-link" data-action="sys-edit" data-id="${user.id}" aria-haspopup="dialog">${esc(user.name)}</a></td><td>${esc(user.email)}</td><td class="user-unit">${units}</td><td class="user-unit-role">${roles}</td><td>${sysStatus(user.enabled)}</td></tr>`;
+};
 for (const role of systemData.roles) {
   // These capabilities are available to everyone who can access their page.
   for (const [field, retired] of [
@@ -996,7 +999,6 @@ if (removedMenuSettings) {
 }
 let systemQuery = "",
   systemUnit = "all",
-  systemRole = "all",
   systemStatus = "all",
   systemEdit = null,
   systemGroupOpen = true;
@@ -1036,10 +1038,6 @@ function systemPage() {
         .includes(systemQuery.toLowerCase()) &&
       (systemStatus === "all" ||
         (x.enabled !== false) === (systemStatus === "on")) &&
-      (kind !== "users" || systemRole === "all" ||
-        userAssignments(x).some(assignment =>
-          String(assignment.role) === systemRole &&
-          (systemUnit === "all" || assignment.unit === systemUnit))) &&
       (!["users", "roles"].includes(kind) ||
         systemUnit === "all" ||
         (kind === "users"
@@ -1057,9 +1055,6 @@ function systemPage() {
         )
         .join("")}</select>`
     : "";
-  const roleFilter = kind === "users"
-    ? `<select name="role" aria-label="篩選角色"><option value="all">全部角色</option>${systemData.roles.map(role => `<option value="${role.id}" ${systemRole === String(role.id) ? "selected" : ""}>${esc(role.name)}（${esc(role.unit)}）</option>`).join("")}</select>`
-    : "";
   const statusFilter = ["users", "roles", "projects"].includes(kind)
     ? `<select name="status" aria-label="篩選狀態">${[
         ["all", "全部狀態"],
@@ -1073,25 +1068,17 @@ function systemPage() {
         .join("")}</select>`
     : "";
   const headers = {
-    users: ["編號", "姓名", "Email", "單位", "角色", "狀態"],
+    users: ["編號", "姓名", "Email", "單位", "單位角色", "狀態"],
     roles: ["編號", "角色名稱", "單位", "說明", "狀態"],
     projects: ["編號", "單位名稱", "狀態"],
   };
   shell(
-    `<section class="panel system-panel"><div class="toolbar">${sysButton("新增", "new", "", 'class="primary"')}<div class="spacer"></div><form id="system-filter">${unitFilter}${roleFilter}${statusFilter}<input name="query" aria-label="${kind === "users" ? "搜尋姓名或 Email" : "搜尋管理資料"}" placeholder="${kind === "users" ? "請輸入姓名或 Email" : kind === "roles" ? "請輸入角色名稱" : kind === "projects" ? "請輸入單位名稱" : "搜尋名稱、帳號或單位"}" value="${esc(systemQuery)}"><button type="submit" class="round search-icon" aria-label="查詢" title="查詢">${icon("search")}</button>${sysButton(icon("rotate-cw"), "reset", "", 'class="round search-icon" aria-label="重設搜尋" title="重設搜尋"')}</form></div>${pager(filtered.length)}<div class="table-scroll"><table class="system-table system-table--${kind}"><thead><tr>${headers[kind].map((h) => `<th scope="col">${h}</th>`).join("")}</tr></thead><tbody>${
+    `<section class="panel system-panel"><div class="toolbar">${sysButton("新增", "new", "", 'class="primary"')}<div class="spacer"></div><form id="system-filter">${unitFilter}${statusFilter}<input name="query" aria-label="${kind === "users" ? "搜尋姓名或 Email" : "搜尋管理資料"}" placeholder="${kind === "users" ? "請輸入姓名或 Email" : kind === "roles" ? "請輸入角色名稱" : kind === "projects" ? "請輸入單位名稱" : "搜尋名稱、帳號或單位"}" value="${esc(systemQuery)}"><button type="submit" class="round search-icon" aria-label="查詢" title="查詢">${icon("search")}</button>${sysButton(icon("rotate-cw"), "reset", "", 'class="round search-icon" aria-label="重設搜尋" title="重設搜尋"')}</form></div>${pager(filtered.length)}<div class="table-scroll"><table class="system-table system-table--${kind}"><thead><tr>${headers[kind].map((h) => `<th scope="col">${h}</th>`).join("")}</tr></thead><tbody>${
       rows
-        .map((x) => {
+        .map((x, index) => {
+          if (kind === "users") return userTableRows(x, index);
           const cells =
-            kind === "users"
-              ? [
-                  x.id,
-                  `<a href="#system/users" class="user-name-link" data-action="sys-edit" data-id="${x.id}" aria-haspopup="dialog">${esc(x.name)}</a>`,
-                  esc(x.email),
-                  assignmentSummary(x, "unit"),
-                  assignmentSummary(x, "role"),
-                  sysStatus(x.enabled),
-                ]
-              : kind === "roles"
+            kind === "roles"
                 ? [
                     x.id,
                     `<a href="#system/roles" data-action="sys-edit" data-id="${x.id}" aria-haspopup="dialog">${esc(x.name)}</a>`,
@@ -1117,7 +1104,6 @@ function systemPage() {
     systemQuery = f.get("query").trim();
     systemStatus = f.get("status") || "all";
     systemUnit = f.get("unit") || "all";
-    systemRole = f.get("role") || "all";
     page = 1;
     systemPage();
   };
@@ -1514,7 +1500,6 @@ async function systemAction(action, b) {
   if (action === "sys-reset") {
     systemQuery = "";
     systemUnit = "all";
-    systemRole = "all";
     systemStatus = "all";
     page = 1;
     systemPage();
