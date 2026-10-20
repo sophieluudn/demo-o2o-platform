@@ -1187,6 +1187,9 @@ table a, table a:hover, table a:focus-visible { text-decoration: none; }
 .login-card .google-mark { width: 18px; height: 18px; stroke: none; }
 #project-unit { width: 180px; max-width: 100%; }
 .permission-field-label { text-align: right; line-height: 36px; }
+.dashboard-home { text-align: center; padding-top: 78px; color: #000; }
+.dashboard-home h1 { margin: 0 0 10px; color: #f00; font-size: 24px; font-weight: 700; }
+.dashboard-home p { margin: 0; font-size: 16px; }
 .system-modal.role-modal { width: min(960px, calc(100vw - 32px)); }
 .permission-editor { min-width: 0; }
 .permission-help { margin: 0 0 12px; color: #606266; line-height: 1.7; }

@@ -141,7 +141,7 @@ const members = [
 ];
 const save = () =>
   localStorage.setItem("o2o-projects", JSON.stringify(projects));
-const route = () => location.hash.slice(1) || "home";
+const route = () => location.hash.slice(1) || "login";
 const go = (r) => {
   location.hash = r;
 };
@@ -499,13 +499,14 @@ function statsPage() {
 function render() {
   let r = route();
   const parts = r.split("/");
-  if (r === "home") {
+  if (r === "login") {
+    if (demoSession.authenticated) { go("home"); return; }
     loginPage();
     return;
   }
   const publicActivity = parts[1] === "member";
   if (!publicActivity && !demoSession.authenticated) {
-    go("home");
+    go("login");
     return;
   }
   if (["edit", "members", "stats"].includes(parts[0])) {
@@ -519,7 +520,9 @@ function render() {
     systemPage();
     return;
   }
-  if (r === "projects") projectList();
+  if (r === "home") {
+    shell('<section class="dashboard-home"><h1>O2O 登入平台</h1><p>後台管理系統</p></section>', "首頁");
+  } else if (r === "projects") projectList();
   else if (r === "new") editor(true);
   else if (parts[0] === "edit") editor();
   else if (parts[0] === "members") memberPage();
@@ -563,7 +566,7 @@ document.addEventListener("click", async (e) => {
     projectUnit = "all";
     query = "";
     page = 1;
-    go("projects");
+    go("home");
   } else if (a === "sidebar") {
     collapsed = !collapsed;
     render();
