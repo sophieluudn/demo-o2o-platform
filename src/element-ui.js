@@ -68,7 +68,9 @@ export function installElementUI() {
   observer.observe(document.body, { childList: true, subtree: true });
   enhanceControls();
 }
+let alertTimer;
 export function showMessage(message, type = 'info') {
+  clearTimeout(alertTimer);
   document.querySelectorAll('.system-alert-host').forEach(host => {
     render(null, host);
     host.remove();
@@ -78,10 +80,16 @@ export function showMessage(message, type = 'info') {
   // An open native dialog is in the top layer; attach there so alerts stay visible.
   const container = document.querySelector('#system-modal[open]') || document.body;
   container.append(host);
+  const dismiss = () => {
+    clearTimeout(alertTimer);
+    render(null, host);
+    host.remove();
+  };
   render(h(ElAlert, {
     title: String(message), type, showIcon: true, center: false,
-    closable: true, onClose: () => { render(null, host); host.remove(); },
+    closable: true, onClose: dismiss,
   }), host);
+  alertTimer = setTimeout(dismiss, 4000);
 }
 export async function confirmAction(message) {
   try {
