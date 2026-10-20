@@ -101,6 +101,13 @@ aside {
   color: #c4dfef;
   z-index: 10;
 }
+aside .platform-name {
+  padding: 18px 20px 12px;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.5;
+}
 aside .nav {
   display: flex;
   align-items: center;
@@ -156,6 +163,7 @@ aside small {
 aside.collapsed {
   width: 64px;
 }
+.collapsed .platform-name,
 .collapsed .nav span,
 .collapsed .nav svg:last-child:not(:first-child),
 .collapsed .subnav,
@@ -903,6 +911,7 @@ textarea,
   aside .nav {
     padding: 0 22px;
   }
+  aside .platform-name,
   aside .nav span,
   aside .nav svg:last-child:not(:first-child),
   aside .subnav,
@@ -1106,6 +1115,7 @@ body.modal-open { overflow: hidden; }
   .system-modal .system-form { padding: 20px 16px; }
   .system-modal.project-modal { padding: 20px 12px; }
   aside.mobile-expanded { width: 210px; z-index: 20; box-shadow: 4px 0 18px #0003; }
+  aside.mobile-expanded .platform-name { display: block; }
   aside.mobile-expanded .nav span { display: inline; }
   aside.mobile-expanded .system-subnav:not([hidden]), aside.mobile-expanded .subnav { display: block; }
 }
