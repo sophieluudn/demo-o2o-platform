@@ -6,6 +6,7 @@ import "element-plus/es/components/alert/style/css";
 import "element-plus/es/components/message-box/style/css";
 import "element-plus/es/components/switch/style/css";
 
+// 以隱藏欄位將 Vue 開關值交回原生 FormData，沿用既有表單儲存流程。
 const UserStatusSwitch = defineComponent({
   props: {
     initial: Boolean,
@@ -34,9 +35,11 @@ const UserStatusSwitch = defineComponent({
   },
 });
 
-// Small Vue islands preserve the existing native forms and delegated actions.
+// 局部掛載 Vue 控制項，保留原生表單與 data-action 事件委派。
 const mounted = new Set();
+
 function enhanceControls() {
+  // 頁面重繪後卸載已離開 DOM 的元件，避免累積失效的掛載紀錄。
   for (const host of mounted) {
     if (!host.isConnected) {
       render(null, host);
@@ -49,7 +52,7 @@ function enhanceControls() {
     )
     .forEach((source) => {
       if (source.closest("[data-element-host], .el-message-box")) return;
-      // Navigation and editor tools keep their screenshot-specific presentation.
+      // 導覽與文字編輯工具保留既有截圖版型。
       if (
         source.matches(".nav, .plain, .modal-close") ||
         source.closest(".rich-toolbar")
@@ -115,6 +118,8 @@ function enhanceControls() {
     });
 }
 let queued = false;
+
+// 合併同一輪 DOM 變更，避免每次新增節點都重複增強控制項。
 export function installElementUI() {
   const observer = new MutationObserver(() => {
     if (queued) return;
@@ -128,6 +133,8 @@ export function installElementUI() {
   enhanceControls();
 }
 let alertTimer;
+
+// 每次只顯示一則提示；新訊息先卸載上一則，並重設自動關閉時間。
 export function showMessage(message, type = "info") {
   clearTimeout(alertTimer);
   document.querySelectorAll(".system-alert-host").forEach((host) => {
@@ -136,7 +143,7 @@ export function showMessage(message, type = "info") {
   });
   const host = document.createElement("div");
   host.className = "system-alert-host";
-  // An open native dialog is in the top layer; attach there so alerts stay visible.
+  // 原生 dialog 位於頂層，提示需放入該視窗內才能保持可見。
   const container =
     document.querySelector("#system-modal[open]") || document.body;
   container.append(host);
@@ -158,6 +165,8 @@ export function showMessage(message, type = "info") {
   );
   alertTimer = setTimeout(dismiss, 4000);
 }
+
+// 取消或關閉確認框皆回傳 false，由呼叫端決定是否繼續寫入。
 export async function confirmAction(message) {
   try {
     await ElMessageBox.confirm(message, "操作確認", {

@@ -1,3 +1,5 @@
+// 頁面以原生 DOM 與 hash 路由運作；Element Plus 僅增強局部控制項。
+// 區段依既有執行順序保留，避免初始化與 localStorage 遷移時序改變。
 import { installElementUI, showMessage, confirmAction } from "./element-ui.js";
 import "./style.css";
 import {
@@ -28,6 +30,8 @@ import {
   List,
   Link,
 } from "lucide";
+
+// ── 共用圖示與 HTML 工具 ──────────────────────────────────────
 const icons = {
   BriefcaseBusiness,
   NotebookText,
@@ -66,6 +70,8 @@ const esc = (s = "") =>
       ],
   );
 const icon = (name) => `<i data-lucide="${name}"></i>`;
+
+// ── 專案與會員示範資料、列表狀態 ──────────────────────────────
 const names = [
   "[測試] 2026生技論壇 AI時代 生醫產業新契機",
   "[測試] 手機和 AI 如何改變我們說故事的方式",
@@ -103,6 +109,7 @@ const seed = names.map((name, i) => ({
   phone: true,
   button: "前往活動",
 }));
+// 讀取舊資料失敗時使用種子資料；保留既有 o2o-projects 儲存鍵。
 let projects;
 try {
   projects = JSON.parse(localStorage.getItem("o2o-projects")) || seed;
@@ -145,11 +152,18 @@ const route = () => location.hash.slice(1) || "login";
 const go = (r) => {
   location.hash = r;
 };
+
+// ── 登入狀態與權限 ────────────────────────────────────────────
+// 這是分頁內的示範身分，不代表正式後端驗證。
 let demoSession = { authenticated: false };
 try {
   const stored = JSON.parse(sessionStorage.getItem("o2o-demo-session"));
   if (stored?.authenticated === true)
-    demoSession = { authenticated: true, unitId: stored.unitId ?? null, userId: stored.userId ?? 1 };
+    demoSession = {
+      authenticated: true,
+      unitId: stored.unitId ?? null,
+      userId: stored.userId ?? 1,
+    };
 } catch {
   /* Session state is optional in this front-end demo. */
 }
@@ -174,48 +188,115 @@ function loginPage() {
     `<main class="entry-screen login-screen"><div class="login-card"><h1>O2O 會員活動應用平台 (Demo)</h1>${button(`${googleMark}<span>登入</span>`, "demo-login", "login-button")}</div></main>`;
 }
 const ALL_UNITS = "*";
-const normalized = (value) => String(value || "").trim().toLowerCase();
-const sessionUser = () => systemData.users.find((user) => user.id === demoSession.userId && user.enabled !== false);
-const enteredUnit = () => systemData.units.find((unit) => String(unit.id) === String(demoSession.unitId))?.name || "";
-const activeUnitNames = () => systemData.units.filter((unit) => unit.enabled !== false).map((unit) => unit.name);
+const normalized = (value) =>
+  String(value || "")
+    .trim()
+    .toLowerCase();
+const sessionUser = () =>
+  systemData.users.find(
+    (user) => user.id === demoSession.userId && user.enabled !== false,
+  );
+const enteredUnit = () =>
+  systemData.units.find(
+    (unit) => String(unit.id) === String(demoSession.unitId),
+  )?.name || "";
+const activeUnitNames = () =>
+  systemData.units
+    .filter((unit) => unit.enabled !== false)
+    .map((unit) => unit.name);
 const assignmentUnitNames = () => [ALL_UNITS, ...activeUnitNames()];
-const assignmentRole = (assignment) => systemData.roles.find((role) =>
-  role.id === assignment.role && role.enabled !== false &&
-  (assignment.unit === ALL_UNITS
-    ? role.id === 1 && role.unit === ALL_UNITS
-    : role.id !== 1 && role.unit === assignment.unit),
-);
+const assignmentRole = (assignment) =>
+  systemData.roles.find(
+    (role) =>
+      role.id === assignment.role &&
+      role.enabled !== false &&
+      (assignment.unit === ALL_UNITS
+        ? role.id === 1 && role.unit === ALL_UNITS
+        : role.id !== 1 && role.unit === assignment.unit),
+  );
 // Management may retain a disabled unit's assignment; business access may not.
-const qualifiedAssignments = (user = sessionUser(), includeDisabledUnits = false) => {
+const qualifiedAssignments = (
+  user = sessionUser(),
+  includeDisabledUnits = false,
+) => {
   if (!user || user.enabled === false) return [];
   const assignments = userAssignments(user);
-  if (assignments.length > 1 && assignments.some((item) => item.unit === ALL_UNITS)) return [];
-  return assignments.filter((assignment) =>
-    assignments.filter((item) => item.unit === assignment.unit).length === 1 &&
-    assignmentRole(assignment) &&
-    (assignment.unit === ALL_UNITS || systemData.units.some((unit) => unit.name === assignment.unit && (includeDisabledUnits || unit.enabled !== false))),
+  if (
+    assignments.length > 1 &&
+    assignments.some((item) => item.unit === ALL_UNITS)
+  )
+    return [];
+  return assignments.filter(
+    (assignment) =>
+      assignments.filter((item) => item.unit === assignment.unit).length ===
+        1 &&
+      assignmentRole(assignment) &&
+      (assignment.unit === ALL_UNITS ||
+        systemData.units.some(
+          (unit) =>
+            unit.name === assignment.unit &&
+            (includeDisabledUnits || unit.enabled !== false),
+        )),
   );
 };
 const validAssignments = () => qualifiedAssignments();
-const isSystemAdmin = () => Boolean(sessionUser() && validAssignments().some((assignment) => assignment.role === 1));
-const unitRoles = (unit) => validAssignments().filter((assignment) => assignment.unit === unit).map(assignmentRole);
-const hasRolePermission = (role, feature, action) => role.permissions?.includes(feature) && (action === "view" || role.operationPermissions?.includes(`${feature}:${action}`));
-const canManageUnit = (unit, action = "view") => Boolean(sessionUser()) && (isSystemAdmin() || qualifiedAssignments(sessionUser(), true).some((assignment) =>
-  assignment.unit === unit && hasRolePermission(assignmentRole(assignment), "projects", action),
-));
-const hasUnitManagement = (action = "view") => isSystemAdmin() || systemData.units.some((unit) => canManageUnit(unit.name, action));
-const scopeAllows = (unit) => activeUnitNames().includes(unit) && (isSystemAdmin() || (unit === enteredUnit() && unitRoles(unit).length > 0));
+const isSystemAdmin = () =>
+  Boolean(
+    sessionUser() &&
+      validAssignments().some((assignment) => assignment.role === 1),
+  );
+const unitRoles = (unit) =>
+  validAssignments()
+    .filter((assignment) => assignment.unit === unit)
+    .map(assignmentRole);
+const hasRolePermission = (role, feature, action) =>
+  role.permissions?.includes(feature) &&
+  (action === "view" ||
+    role.operationPermissions?.includes(`${feature}:${action}`));
+const canManageUnit = (unit, action = "view") =>
+  Boolean(sessionUser()) &&
+  (isSystemAdmin() ||
+    qualifiedAssignments(sessionUser(), true).some(
+      (assignment) =>
+        assignment.unit === unit &&
+        hasRolePermission(assignmentRole(assignment), "projects", action),
+    ));
+const hasUnitManagement = (action = "view") =>
+  isSystemAdmin() ||
+  systemData.units.some((unit) => canManageUnit(unit.name, action));
+const scopeAllows = (unit) =>
+  activeUnitNames().includes(unit) &&
+  (isSystemAdmin() || (unit === enteredUnit() && unitRoles(unit).length > 0));
 const can = (feature, action = "view", unit) => {
-  if (feature === "projects") return unit === undefined ? hasUnitManagement(action) : canManageUnit(unit, action);
+  if (feature === "projects")
+    return unit === undefined
+      ? hasUnitManagement(action)
+      : canManageUnit(unit, action);
   unit ??= enteredUnit();
   if (!scopeAllows(unit)) return false;
   if (isSystemAdmin()) return true;
-  return unitRoles(unit).some((role) => hasRolePermission(role, feature, action));
+  return unitRoles(unit).some((role) =>
+    hasRolePermission(role, feature, action),
+  );
 };
-const scopedUnitFilter = (value) => isSystemAdmin() && value === "all" ? "all" : scopeAllows(value) && availableUnits().includes(value) ? value : enteredUnit();
+const scopedUnitFilter = (value) =>
+  isSystemAdmin() && value === "all"
+    ? "all"
+    : scopeAllows(value) && availableUnits().includes(value)
+      ? value
+      : enteredUnit();
 const filterUnits = () => availableUnits().filter(scopeAllows);
-const selectableUnits = () => systemData.units.filter((unit) => unit.enabled !== false && (isSystemAdmin() || unitRoles(unit.name).length > 0));
-function deny() { toast("您沒有此功能的操作權限。", "error"); return false; }
+const selectableUnits = () =>
+  systemData.units.filter(
+    (unit) =>
+      unit.enabled !== false &&
+      (isSystemAdmin() || unitRoles(unit.name).length > 0),
+  );
+function deny() {
+  toast("您沒有此功能的操作權限。", "error");
+  return false;
+}
+// 撤權、登出或切換單位時，同時清除目前專案及報表暫存。
 function clearSensitiveState() {
   if ($("#system-modal")) closeSystemModal();
   current = null;
@@ -235,13 +316,19 @@ function endSession(message = "") {
   if (route() !== "login") go("login");
   if (message) toast(message, "error");
 }
+// 路由與操作前重新檢查帳號、角色及目前單位，處理同頁或跨分頁撤權。
 function checkSession() {
   if (!demoSession.authenticated) return false;
   if (!sessionUser() || !selectableUnits().length) {
     endSession("帳號已停用，或沒有啟用的單位與角色，無法登入後台。");
     return false;
   }
-  if (demoSession.unitId != null && !selectableUnits().some((unit) => String(unit.id) === String(demoSession.unitId))) {
+  if (
+    demoSession.unitId != null &&
+    !selectableUnits().some(
+      (unit) => String(unit.id) === String(demoSession.unitId),
+    )
+  ) {
     clearSensitiveState();
     demoSession.unitId = null;
     saveDemoSession();
@@ -255,11 +342,20 @@ function checkSession() {
 const systemRecordAccess = (kind, record, action = "view") => {
   if (kind === "projects") return canManageUnit(record.name, action);
   if (isSystemAdmin()) return true;
-  if (kind === "roles" && record.id === 1 && action === "view") return can("roles");
-  return can(kind, action) && (kind === "users"
-    ? userAssignments(record).some((assignment) => assignment.unit === enteredUnit() || (assignment.unit === ALL_UNITS && assignment.role === 1))
-    : record.unit === enteredUnit());
+  if (kind === "roles" && record.id === 1 && action === "view")
+    return can("roles");
+  return (
+    can(kind, action) &&
+    (kind === "users"
+      ? userAssignments(record).some(
+          (assignment) =>
+            assignment.unit === enteredUnit() ||
+            (assignment.unit === ALL_UNITS && assignment.role === 1),
+        )
+      : record.unit === enteredUnit())
+  );
 };
+// 依網址指定的專案判斷權限，避免沿用上一頁的 current 狀態。
 function routeAccess() {
   const [name, id] = route().split("/");
   if (["home", "select-unit", "login"].includes(name)) return true;
@@ -267,24 +363,66 @@ function routeAccess() {
   if (name === "new") return can("project-list", "write");
   if (name === "projects") return can("project-list");
   const project = projects.find((item) => item.id === Number(id));
-  if (["edit", "members", "stats"].includes(name)) return Boolean(project && can(name === "edit" ? "project-list" : name, name === "edit" ? "write" : "view", project.unit));
+  if (["edit", "members", "stats"].includes(name))
+    return Boolean(
+      project &&
+        can(
+          name === "edit" ? "project-list" : name,
+          name === "edit" ? "write" : "view",
+          project.unit,
+        ),
+    );
   return true;
 }
 function applyAccessUI() {
   const app = $("#app");
-  app.querySelectorAll('a[href="#projects"], [data-action="nav-group"]').forEach((node) => { node.hidden = !can("project-list"); });
-  app.querySelectorAll('[data-action="new"]').forEach((node) => node.hidden = !can("project-list", "write"));
-  app.querySelectorAll('[data-action]').forEach((node) => {
-    const match = /^(edit|qr|copy|members|stats)-(\d+)$/.exec(node.dataset.action);
+  app
+    .querySelectorAll('a[href="#projects"], [data-action="nav-group"]')
+    .forEach((node) => {
+      node.hidden = !can("project-list");
+    });
+  app
+    .querySelectorAll('[data-action="new"]')
+    .forEach((node) => (node.hidden = !can("project-list", "write")));
+  app.querySelectorAll("[data-action]").forEach((node) => {
+    const match = /^(edit|qr|copy|members|stats)-(\d+)$/.exec(
+      node.dataset.action,
+    );
     if (match) {
       const project = projects.find((item) => item.id === Number(match[2]));
-      node.hidden = !project || !can(["members", "stats"].includes(match[1]) ? match[1] : "project-list", match[1] === "edit" || match[1] === "qr" ? "write" : "view", project.unit);
+      node.hidden =
+        !project ||
+        !can(
+          ["members", "stats"].includes(match[1]) ? match[1] : "project-list",
+          match[1] === "edit" || match[1] === "qr" ? "write" : "view",
+          project.unit,
+        );
     }
-    if (["export", "export-log"].includes(node.dataset.action)) node.hidden = !can(route().split("/")[0], node.dataset.action, current?.unit);
+    if (["export", "export-log"].includes(node.dataset.action))
+      node.hidden = !can(
+        route().split("/")[0],
+        node.dataset.action,
+        current?.unit,
+      );
   });
 }
+
+// ── 共用版面、單位選擇與分頁 ──────────────────────────────────
 function unitSelectionPage() {
-  $("#app").innerHTML = `<main class="entry-screen unit-screen"><section class="unit-card" aria-labelledby="unit-heading"><h1 id="unit-heading">請選擇商店</h1><div class="unit-options">${selectableUnits().map((unit) => button(esc(unit.name), "select-unit", "primary unit-button", `data-unit-id="${esc(unit.id)}"`)).join("") || '<p class="unit-empty" role="status">目前沒有可選擇的單位，請聯絡管理員啟用單位。</p>'}</div></section></main>`;
+  $("#app").innerHTML =
+    `<main class="entry-screen unit-screen"><section class="unit-card" aria-labelledby="unit-heading"><h1 id="unit-heading">請選擇單位</h1><div class="unit-options">${
+      selectableUnits()
+        .map((unit) =>
+          button(
+            esc(unit.name),
+            "select-unit",
+            "primary unit-button",
+            `data-unit-id="${esc(unit.id)}"`,
+          ),
+        )
+        .join("") ||
+      '<p class="unit-empty" role="status">目前沒有可選擇的單位，請聯絡管理員啟用單位。</p>'
+    }</div></section></main>`;
 }
 function shell(content, title) {
   $("#app").innerHTML =
@@ -330,8 +468,11 @@ const filteredProjects = () =>
   projects.filter(
     (p) =>
       (p.name + p.unit).toLowerCase().includes(query.toLowerCase()) &&
-      can("project-list", "view", p.unit) && (projectUnit === "all" || p.unit === projectUnit),
+      can("project-list", "view", p.unit) &&
+      (projectUnit === "all" || p.unit === projectUnit),
   );
+
+// ── 專案列表與編輯表單 ────────────────────────────────────────
 function projectList() {
   projectUnit = scopedUnitFilter(projectUnit);
   const filtered = filteredProjects();
@@ -477,7 +618,11 @@ function editor(isNew = false, modal = false) {
 function submitProject(e, isNew) {
   e.preventDefault();
   const form = e.target;
-  if (!checkSession() || !can("project-list", "write", isNew ? enteredUnit() : current?.unit)) return deny();
+  if (
+    !checkSession() ||
+    !can("project-list", "write", isNew ? enteredUnit() : current?.unit)
+  )
+    return deny();
   const fd = new FormData(form);
   const p = {
     ...(!isNew ? current : {}),
@@ -523,6 +668,8 @@ function submitProject(e, isNew) {
     toast("瀏覽器儲存空間不足，請縮小上傳圖片後重試", "error");
   }
 }
+
+// ── QRCode、會員紀錄與統計示範 ─────────────────────────────────
 function projectURL(p) {
   return `${location.origin}${location.pathname}#/member/${p.id}`;
 }
@@ -615,6 +762,8 @@ function statsPage() {
     "登入與註冊統計",
   );
 }
+
+// ── 路由分派 ──────────────────────────────────────────────────
 function render() {
   let r = route();
   const parts = r.split("/");
@@ -633,7 +782,9 @@ function render() {
     return;
   }
   if (!publicActivity) {
-    const selectedUnit = selectableUnits().find((unit) => String(unit.id) === String(demoSession.unitId));
+    const selectedUnit = selectableUnits().find(
+      (unit) => String(unit.id) === String(demoSession.unitId),
+    );
     if (r === "select-unit") {
       unitSelectionPage();
       return;
@@ -645,7 +796,10 @@ function render() {
   }
   if (!publicActivity && !routeAccess()) {
     clearSensitiveState();
-    shell('<section class="panel"><h1>無法存取</h1><p>您沒有此頁面的權限，請從選單選擇其他功能或切換專案。</p></section>', "無法存取");
+    shell(
+      '<section class="panel"><h1>無法存取</h1><p>您沒有此頁面的權限，請從選單選擇其他功能或切換專案。</p></section>',
+      "無法存取",
+    );
     return;
   }
   if (["edit", "members", "stats"].includes(parts[0])) {
@@ -691,23 +845,63 @@ function download(content, name, type) {
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
+
+// ── 全域事件委派 ──────────────────────────────────────────────
+// 頁面重繪後仍由 document 接收 data-action，不需逐一重新綁定按鈕。
 let exportHistory = [];
 document.addEventListener("click", async (e) => {
   const b = e.target.closest("[data-action]");
   if (!b) return;
   const a = b.dataset.action;
-  if (!["demo-login", "logout"].includes(a) && (!checkSession() || (a !== "select-unit" && a !== "switch-unit" && !routeAccess()))) return;
+  if (
+    !["demo-login", "logout"].includes(a) &&
+    (!checkSession() ||
+      (a !== "select-unit" && a !== "switch-unit" && !routeAccess()))
+  )
+    return;
   const projectAction = /^(edit|qr|copy|members|stats)-(\d+)$/.exec(a);
   if (projectAction) {
-    const project = projects.find((item) => item.id === Number(projectAction[2]));
-    const feature = ["members", "stats"].includes(projectAction[1]) ? projectAction[1] : "project-list";
-    if (!project || !can(feature, ["edit", "qr"].includes(projectAction[1]) ? "write" : "view", project.unit)) return deny();
+    const project = projects.find(
+      (item) => item.id === Number(projectAction[2]),
+    );
+    const feature = ["members", "stats"].includes(projectAction[1])
+      ? projectAction[1]
+      : "project-list";
+    if (
+      !project ||
+      !can(
+        feature,
+        ["edit", "qr"].includes(projectAction[1]) ? "write" : "view",
+        project.unit,
+      )
+    )
+      return deny();
   }
   if (a === "new" && !can("project-list", "write")) return deny();
-  const editorAction = /^(tab-|question-|rich-|tracker-)/.test(a) || ["remove-question", "copy-current", "download-qr"].includes(a);
-  if (editorAction && (!/^(new|edit\/\d+)$/.test(route()) || !can("project-list", "write", route() === "new" ? enteredUnit() : current?.unit))) return deny();
-  if ((a === "report-query" || a.startsWith("expand-")) && (!/^(members|stats)\/\d+$/.test(route()) || !can(route().split("/")[0], "view", current?.unit))) return deny();
-  if (["export", "export-log"].includes(a) && !can(route().split("/")[0], a, current?.unit)) return deny();
+  const editorAction =
+    /^(tab-|question-|rich-|tracker-)/.test(a) ||
+    ["remove-question", "copy-current", "download-qr"].includes(a);
+  if (
+    editorAction &&
+    (!/^(new|edit\/\d+)$/.test(route()) ||
+      !can(
+        "project-list",
+        "write",
+        route() === "new" ? enteredUnit() : current?.unit,
+      ))
+  )
+    return deny();
+  if (
+    (a === "report-query" || a.startsWith("expand-")) &&
+    (!/^(members|stats)\/\d+$/.test(route()) ||
+      !can(route().split("/")[0], "view", current?.unit))
+  )
+    return deny();
+  if (
+    ["export", "export-log"].includes(a) &&
+    !can(route().split("/")[0], a, current?.unit)
+  )
+    return deny();
   if (a.startsWith("sys-")) {
     e.preventDefault();
     systemAction(a, b);
@@ -715,10 +909,24 @@ document.addEventListener("click", async (e) => {
   }
   const r = route();
   if (a === "demo-login") {
-    const email = normalized(sessionStorage.getItem("o2o-demo-login-email") ?? systemData.users.find((user) => user.id === 1)?.email);
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return toast("請輸入有效的 Email。", "error");
-    const matches = systemData.users.filter((user) => normalized(user.email) === email);
-    if (matches.length !== 1) { toast(matches.length ? "此 Email 有重複的使用者資料，請聯絡管理員。" : "此 Google 帳號尚未建立使用者，請聯絡管理員。", "error"); return; }
+    const email = normalized(
+      sessionStorage.getItem("o2o-demo-login-email") ??
+        systemData.users.find((user) => user.id === 1)?.email,
+    );
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+      return toast("請輸入有效的 Email。", "error");
+    const matches = systemData.users.filter(
+      (user) => normalized(user.email) === email,
+    );
+    if (matches.length !== 1) {
+      toast(
+        matches.length
+          ? "此 Email 有重複的使用者資料，請聯絡管理員。"
+          : "此 Google 帳號尚未建立使用者，請聯絡管理員。",
+        "error",
+      );
+      return;
+    }
     demoSession = { authenticated: true, userId: matches[0].id };
     if (!checkSession()) return;
     saveDemoSession();
@@ -736,7 +944,9 @@ document.addEventListener("click", async (e) => {
     go("select-unit");
   } else if (a === "select-unit") {
     if (!demoSession.authenticated) return;
-    const unit = selectableUnits().find((unit) => String(unit.id) === b.dataset.unitId);
+    const unit = selectableUnits().find(
+      (unit) => String(unit.id) === b.dataset.unitId,
+    );
     if (!unit) return;
     demoSession.unitId = unit.id;
     projectUnit = unit.name;
@@ -865,11 +1075,23 @@ document.addEventListener("click", async (e) => {
       "O2O-demo-export.csv",
       "text/csv;charset=utf-8",
     );
-    exportHistory.unshift({ projectId: current.id, feature: r.split("/")[0], userId: demoSession.userId, time: new Date().toLocaleString("zh-TW") });
+    exportHistory.unshift({
+      projectId: current.id,
+      feature: r.split("/")[0],
+      userId: demoSession.userId,
+      time: new Date().toLocaleString("zh-TW"),
+    });
     toast("CSV 已匯出", "success");
   } else if (a === "export-log") {
     toast(
-      exportHistory.some((item) => item.projectId === current.id && item.feature === r.split("/")[0] && item.userId === demoSession.userId) ? `最近匯出：${exportHistory.find((item) => item.projectId === current.id && item.feature === r.split("/")[0] && item.userId === demoSession.userId).time}` : "尚無匯出紀錄",
+      exportHistory.some(
+        (item) =>
+          item.projectId === current.id &&
+          item.feature === r.split("/")[0] &&
+          item.userId === demoSession.userId,
+      )
+        ? `最近匯出：${exportHistory.find((item) => item.projectId === current.id && item.feature === r.split("/")[0] && item.userId === demoSession.userId).time}`
+        : "尚無匯出紀錄",
     );
   } else if (a.startsWith("question-")) {
     $("#survey-fields").insertAdjacentHTML(
@@ -921,9 +1143,13 @@ document.addEventListener("change", (e) => {
   if (e.target.matches('[name="assignment-unit"]')) {
     const form = e.target.closest("form");
     const rows = [...form.querySelectorAll('[name="assignment-unit"]')];
-    if ((e.target.value === ALL_UNITS && rows.length > 1) || rows.some((select) => select !== e.target && select.value === ALL_UNITS)) {
+    if (
+      (e.target.value === ALL_UNITS && rows.length > 1) ||
+      rows.some((select) => select !== e.target && select.value === ALL_UNITS)
+    ) {
       e.target.value = e.target.dataset.previousValue || "";
-      $("#error-assignments").textContent = "全部單位不可與其他指派並存，請先移除其他指派。";
+      $("#error-assignments").textContent =
+        "全部單位不可與其他指派並存，請先移除其他指派。";
       toast("請先移除其他指派，再選擇全部單位。", "warning");
       return;
     }
@@ -975,6 +1201,8 @@ window.addEventListener("hashchange", () => {
   render();
   window.scrollTo(0, 0);
 });
+
+// ── 系統管理資料與舊資料遷移 ──────────────────────────────────
 const systemDefaults = {
   users: [
     {
@@ -1049,6 +1277,7 @@ const allOperationIds = () =>
   permissionFeatures.flatMap((feature) =>
     feature.actions.map((action) => `${feature.id}:${action}`),
   );
+// 權限分為功能檢視與個別操作；矩陣互動保持操作勾選時同時具有檢視權。
 function rolePermissionTable(role) {
   const views = role.id === 1 ? allPermissionIds() : role.permissions || [];
   const operations =
@@ -1102,7 +1331,9 @@ if (!Array.isArray(systemData.units)) {
           Array.isArray(u.assignments) ? u.assignments.map((a) => a.unit) : [],
         ),
         ...systemData.roles.map((role) => role.unit),
-      ].filter((unit) => typeof unit === "string" && unit.trim() && unit !== ALL_UNITS),
+      ].filter(
+        (unit) => typeof unit === "string" && unit.trim() && unit !== ALL_UNITS,
+      ),
     ),
   ];
   systemData.units = (names.length ? names : ["行動發展部"]).map(
@@ -1144,12 +1375,16 @@ const userTableRows = (user, index) => {
   const assignments = userAssignments(user).length
     ? userAssignments(user)
     : [{ unit: user.unit || "未指派", role: user.role }];
-  const visibleAssignments = assignments.filter((assignment) =>
-    (assignment.unit === ALL_UNITS && assignment.role === 1) ||
-    (scopeAllows(assignment.unit) && (systemUnit === "all" || assignment.unit === systemUnit)),
+  const visibleAssignments = assignments.filter(
+    (assignment) =>
+      (assignment.unit === ALL_UNITS && assignment.role === 1) ||
+      (scopeAllows(assignment.unit) &&
+        (systemUnit === "all" || assignment.unit === systemUnit)),
   );
   const units = visibleAssignments
-    .map((assignment) => assignment.unit === ALL_UNITS ? "全部單位" : esc(assignment.unit))
+    .map((assignment) =>
+      assignment.unit === ALL_UNITS ? "全部單位" : esc(assignment.unit),
+    )
     .join("<br>");
   const roles = visibleAssignments
     .map((assignment) => {
@@ -1188,6 +1423,7 @@ for (const role of systemData.roles) {
   }
 }
 // Only the built-in role is migrated to global scope. General '*' roles stay invalid.
+// 舊管理員指派收斂為唯一的「全部單位」，保留其餘帳號與角色資料。
 function migrateAdminScope(data) {
   const before = JSON.stringify(data);
   const admin = data.roles.find((role) => role.id === 1);
@@ -1199,7 +1435,13 @@ function migrateAdminScope(data) {
     for (const user of data.users) {
       const assignments = user.assignments || [];
       if (assignments.some((assignment) => Number(assignment.role) === 1)) {
-        user.assignments = [{ ...assignments.find((assignment) => Number(assignment.role) === 1), unit: ALL_UNITS, role: 1 }];
+        user.assignments = [
+          {
+            ...assignments.find((assignment) => Number(assignment.role) === 1),
+            unit: ALL_UNITS,
+            role: 1,
+          },
+        ];
         user.unit = ALL_UNITS;
         user.role = 1;
       }
@@ -1229,9 +1471,17 @@ function persistSystem() {
     return false;
   }
 }
+
+// ── 系統管理列表與編輯視窗 ────────────────────────────────────
 function systemNavigation() {
   if (!systemSections.some((section) => can(section.id))) return "";
-  return `<button class="nav" data-action="sys-group" aria-expanded="${systemGroupOpen}" title="系統管理">${icon("settings")}<span>系統管理</span>${icon(systemGroupOpen ? "chevron-down" : "chevron-right")}</button><div class="system-subnav" ${systemGroupOpen ? "" : "hidden"}>${systemSections.filter((m) => can(m.id)).map((m) => `<a class="subnav ${route() === `system/${m.id}` ? "active" : ""}" href="#system/${m.id}">${esc(m.name)}</a>`).join("")}</div>`;
+  return `<button class="nav" data-action="sys-group" aria-expanded="${systemGroupOpen}" title="系統管理">${icon("settings")}<span>系統管理</span>${icon(systemGroupOpen ? "chevron-down" : "chevron-right")}</button><div class="system-subnav" ${systemGroupOpen ? "" : "hidden"}>${systemSections
+    .filter((m) => can(m.id))
+    .map(
+      (m) =>
+        `<a class="subnav ${route() === `system/${m.id}` ? "active" : ""}" href="#system/${m.id}">${esc(m.name)}</a>`,
+    )
+    .join("")}</div>`;
 }
 const sysButton = (label, action, id = "", extra = "") =>
   `<button type="button" data-action="sys-${action}" data-id="${esc(id)}" ${extra}>${label}</button>`;
@@ -1264,7 +1514,9 @@ function systemPage() {
         systemUnit === "all" ||
         (kind === "users"
           ? userAssignments(x).some(
-              (assignment) => assignment.unit === systemUnit || (assignment.unit === ALL_UNITS && assignment.role === 1),
+              (assignment) =>
+                assignment.unit === systemUnit ||
+                (assignment.unit === ALL_UNITS && assignment.role === 1),
             )
           : x.id === 1 || x.unit === systemUnit)),
   );
@@ -1320,11 +1572,22 @@ function systemPage() {
     }</tbody></table></div></section>`,
     menu.name,
   );
-  if (!can(kind, "write")) $("#app").querySelectorAll('[data-action="sys-edit"]').forEach((node) => { node.removeAttribute("data-action"); node.removeAttribute("aria-haspopup"); });
-  $("#app").querySelectorAll('[data-action="sys-edit"]').forEach((node) => {
-    const record = list.find((item) => String(item.id) === node.dataset.id);
-    if (!record || !systemRecordAccess(kind, record, "write")) { node.removeAttribute("data-action"); node.removeAttribute("aria-haspopup"); }
-  });
+  if (!can(kind, "write"))
+    $("#app")
+      .querySelectorAll('[data-action="sys-edit"]')
+      .forEach((node) => {
+        node.removeAttribute("data-action");
+        node.removeAttribute("aria-haspopup");
+      });
+  $("#app")
+    .querySelectorAll('[data-action="sys-edit"]')
+    .forEach((node) => {
+      const record = list.find((item) => String(item.id) === node.dataset.id);
+      if (!record || !systemRecordAccess(kind, record, "write")) {
+        node.removeAttribute("data-action");
+        node.removeAttribute("aria-haspopup");
+      }
+    });
   $("#system-filter").onsubmit = (e) => {
     e.preventDefault();
     const f = new FormData(e.target);
@@ -1397,7 +1660,11 @@ function roleForm(role) {
   return `<form id="system-form" class="system-form role-form" novalidate><h2>${role.id ? "編輯" : "新增"}角色</h2><div class="user-fields"><div class="user-field"><label for="role-enabled">狀態</label><span class="user-enabled-switch" data-input-id="role-enabled" data-enabled="${role.enabled !== false}" data-disabled="${role.id === 1}"></span></div>${field(
     "單位",
     "unit",
-    `<select id="role-unit" name="unit" ${role.id === 1 ? "disabled" : ""} required aria-describedby="error-unit"><option value="">${role.id !== 1 && unit === ALL_UNITS ? "原全部單位範圍已失效，請選擇個別單位" : "請選擇單位"}</option>${(role.id === 1 ? [ALL_UNITS] : activeUnitNames())
+    `<select id="role-unit" name="unit" ${role.id === 1 ? "disabled" : ""} required aria-describedby="error-unit"><option value="">${role.id !== 1 && unit === ALL_UNITS ? "原全部單位範圍已失效，請選擇個別單位" : "請選擇單位"}</option>${(role.id ===
+    1
+      ? [ALL_UNITS]
+      : activeUnitNames()
+    )
       .map(
         (value) =>
           `<option value="${esc(value)}" ${value === unit ? "selected" : ""}>${value === ALL_UNITS ? "全部單位" : esc(value)}</option>`,
@@ -1431,8 +1698,10 @@ function validateRoleForm(form, existing) {
               ),
     };
   const errors = {};
-  if (existing?.id !== 1 && !activeUnitNames().includes(values.unit)) errors.unit = "一般角色必須選擇啟用中的個別單位。";
-  else if (existing?.id !== 1 && !can("roles", "write", values.unit)) errors.unit = "您沒有此單位的角色編輯權限。";
+  if (existing?.id !== 1 && !activeUnitNames().includes(values.unit))
+    errors.unit = "一般角色必須選擇啟用中的個別單位。";
+  else if (existing?.id !== 1 && !can("roles", "write", values.unit))
+    errors.unit = "您沒有此單位的角色編輯權限。";
   if (!values.name) errors.name = "請輸入角色名稱。";
   else if (
     values.name.length > 100 ||
@@ -1449,8 +1718,10 @@ function validateRoleForm(form, existing) {
   )
     errors.name = "此單位已有相同的角色名稱。";
   if (
-    existing && existing.id !== 1 &&
-    existing.unit !== ALL_UNITS && existing.unit !== values.unit &&
+    existing &&
+    existing.id !== 1 &&
+    existing.unit !== ALL_UNITS &&
+    existing.unit !== values.unit &&
     systemData.users.some((user) => userHasRole(user, existing.id))
   )
     errors.unit =
@@ -1473,7 +1744,14 @@ function validateRoleForm(form, existing) {
 function userForm(user) {
   const assignments = user.id
     ? userAssignments(user)
-    : [{ unit: activeUnitNames().includes(systemUnit) ? systemUnit : enteredUnit(), role: null }];
+    : [
+        {
+          unit: activeUnitNames().includes(systemUnit)
+            ? systemUnit
+            : enteredUnit(),
+          role: null,
+        },
+      ];
   const field = (label, name, control) =>
     `<div class="user-field"><label for="user-${name}"><em aria-hidden="true">*</em> ${label}</label><div class="user-field-control">${control}<p class="field-error" id="error-${name}" aria-live="polite"></p></div></div>`;
   const attrs = (name) =>
@@ -1481,7 +1759,15 @@ function userForm(user) {
   return `<form id="system-form" class="system-form user-form multi-unit-user-form" novalidate><h2>${user.id ? "編輯" : "新增"}使用者</h2><div class="user-fields"><div class="user-field"><label for="user-enabled">狀態</label><span class="user-enabled-switch" data-enabled="${user.enabled !== false}"></span></div>${field("姓名", "name", `<input ${attrs("name")} value="${esc(user.name || "")}" maxlength="100" autocomplete="name">`)}${field("Email", "email", `<input ${attrs("email")} type="email" value="${esc(user.email || "")}" maxlength="254" autocomplete="email">`)}<div class="user-field"><span class="permission-field-label" id="assignments-label"><em aria-hidden="true">*</em> 單位與角色</span><div class="assignment-editor" role="group" aria-labelledby="assignments-label" aria-describedby="error-assignments"><div id="assignment-rows">${assignmentRows(assignments)}</div><p class="field-error" id="error-assignments" aria-live="polite"></p></div></div></div><p id="system-error" role="alert"></p><div class="inline user-form-actions">${sysButton("取消", "cancel")}<button type="submit" class="primary">儲存</button></div></form>`;
 }
 function assignmentRoleOptions(unit, selectedRole) {
-  const roles = systemData.roles.filter((role) => role.enabled !== false && (unit === ALL_UNITS ? role.id === 1 : role.id !== 1 && activeUnitNames().includes(unit) && role.unit === unit));
+  const roles = systemData.roles.filter(
+    (role) =>
+      role.enabled !== false &&
+      (unit === ALL_UNITS
+        ? role.id === 1
+        : role.id !== 1 &&
+          activeUnitNames().includes(unit) &&
+          role.unit === unit),
+  );
   const selected = systemData.roles.find((role) => role.id === selectedRole);
   const invalidSelection =
     selectedRole && !roles.some((role) => role.id === selectedRole);
@@ -1512,7 +1798,10 @@ function readAssignmentRows(form) {
 function updateAssignmentRows(action, button) {
   const form = $("#system-form");
   const assignments = readAssignmentRows(form);
-  if (action === "sys-assignment-add" && assignments.some((assignment) => assignment.unit === ALL_UNITS)) {
+  if (
+    action === "sys-assignment-add" &&
+    assignments.some((assignment) => assignment.unit === ALL_UNITS)
+  ) {
     $("#error-assignments").textContent = "已選擇全部單位，不可新增其他指派。";
     toast("已選擇全部單位，不可新增其他指派。", "warning");
     return;
@@ -1533,6 +1822,7 @@ function updateAssignmentRows(action, button) {
         );
   $(`#assignment-unit-${index}`)?.focus();
 }
+// 儲存前獨立檢查 Email 唯一性與單位／角色指派，不只依賴畫面選項。
 function validateUserForm(form, existing) {
   const data = new FormData(form),
     values = {
@@ -1557,7 +1847,14 @@ function validateUserForm(form, existing) {
     !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email)
   )
     errors.email = "請輸入有效的 Email，例如 name@example.com。";
-  if (!errors.email && systemData.users.some((user) => user.id !== existing?.id && normalized(user.email) === normalized(values.email))) {
+  if (
+    !errors.email &&
+    systemData.users.some(
+      (user) =>
+        user.id !== existing?.id &&
+        normalized(user.email) === normalized(values.email),
+    )
+  ) {
     errors.email = "此 Email 已存在，請編輯既有使用者的單位與角色。";
     toast(errors.email, "warning");
   }
@@ -1568,11 +1865,12 @@ function validateUserForm(form, existing) {
       ? ""
       : "請選擇單位。";
     const role = systemData.roles.find((role) => role.id === assignment.role);
-    let roleError = !role || role.enabled === false
-      ? "請選擇角色。"
-      : !assignmentRole(assignment)
-        ? "角色不屬於所選單位，請重新選擇。"
-        : "";
+    let roleError =
+      !role || role.enabled === false
+        ? "請選擇角色。"
+        : !assignmentRole(assignment)
+          ? "角色不屬於所選單位，請重新選擇。"
+          : "";
     if (!unitError && seen.has(assignment.unit))
       unitError = "同一單位只能設定一個角色，請刪除重複的單位。";
     seen.add(assignment.unit);
@@ -1590,7 +1888,10 @@ function validateUserForm(form, existing) {
   });
   if (!values.assignments.length)
     errors.assignments = "請至少設定一組單位與角色。";
-  if (values.assignments.length > 1 && values.assignments.some((assignment) => assignment.unit === ALL_UNITS))
+  if (
+    values.assignments.length > 1 &&
+    values.assignments.some((assignment) => assignment.unit === ALL_UNITS)
+  )
     errors.assignments = "全部單位不可與其他指派並存，請先移除其他指派。";
   if (
     existing &&
@@ -1643,6 +1944,7 @@ function validateUserForm(form, existing) {
   values.role = values.assignments[0].role;
   return values;
 }
+// 寫入前重新授權；單位更名需同步專案、角色與使用者指派。
 async function saveSystemForm(e) {
   e.preventDefault();
   if (e.target.dataset.confirming === "true") return;
@@ -1661,7 +1963,11 @@ async function saveSystemForm(e) {
   if (kind === "users") {
     const values = validateUserForm(e.target, existing);
     if (!values) return;
-    if (existing?.enabled !== false && userHasRole(existing || {}, 1) && !values.enabled) {
+    if (
+      existing?.enabled !== false &&
+      userHasRole(existing || {}, 1) &&
+      !values.enabled
+    ) {
       e.target.dataset.confirming = "true";
       let confirmed;
       try {
@@ -1670,7 +1976,14 @@ async function saveSystemForm(e) {
         delete e.target.dataset.confirming;
       }
       if (!confirmed) return;
-      if (!e.target.isConnected || systemList(kind) !== list || list.find((item) => item.id === existing.id) !== existing || !checkSession() || !systemRecordAccess(kind, existing, "write")) return;
+      if (
+        !e.target.isConnected ||
+        systemList(kind) !== list ||
+        list.find((item) => item.id === existing.id) !== existing ||
+        !checkSession() ||
+        !systemRecordAccess(kind, existing, "write")
+      )
+        return;
       // Revalidate last-administrator protection after waiting for confirmation.
       const checked = validateUserForm(e.target, existing);
       if (!checked) return;
@@ -1686,7 +1999,11 @@ async function saveSystemForm(e) {
       ? "請輸入單位名稱。"
       : name.length > 100 || /[\u0000-\u001f\u007f]/.test(name)
         ? "單位名稱請使用 100 字以內的文字。"
-        : list.some((unit) => unit.id !== existing?.id && normalized(unit.name) === normalized(name))
+        : list.some(
+              (unit) =>
+                unit.id !== existing?.id &&
+                normalized(unit.name) === normalized(name),
+            )
           ? "單位名稱已存在。"
           : "";
     e.target.querySelector("#error-name").textContent = warning;
@@ -1703,7 +2020,11 @@ async function saveSystemForm(e) {
   const before = structuredClone(systemData);
   const projectsBefore = structuredClone(projects);
   if (kind === "projects" && existing && existing.name !== name) {
-    for (const item of [...projects, ...systemData.users, ...systemData.roles]) {
+    for (const item of [
+      ...projects,
+      ...systemData.users,
+      ...systemData.roles,
+    ]) {
       if (item.unit === existing.name) item.unit = name;
     }
     for (const user of systemData.users) {
@@ -1718,7 +2039,9 @@ async function saveSystemForm(e) {
   }
   if (existing) list[list.indexOf(existing)] = record;
   else list.push(record);
-  try { save(); } catch {
+  try {
+    save();
+  } catch {
     projects = projectsBefore;
     systemData = before;
     toast("無法儲存專案歸屬，請確認瀏覽器儲存空間。", "error");
@@ -1734,7 +2057,8 @@ async function saveSystemForm(e) {
   systemUnit = scopedUnitFilter(systemUnit);
   closeSystemModal();
   render();
-  if (demoSession.authenticated && routeAccess() && route() !== "select-unit") toast("設定已儲存", "success");
+  if (demoSession.authenticated && routeAccess() && route() !== "select-unit")
+    toast("設定已儲存", "success");
 }
 async function systemAction(action, b) {
   if (action === "sys-group" && window.innerWidth <= 650) {
@@ -1749,7 +2073,11 @@ async function systemAction(action, b) {
   }
   const kind = route().split("/")[1];
   if (!systemSections.some((m) => m.id === kind)) return;
-  if (!["sys-cancel", "sys-reset"].includes(action) && (!checkSession() || !can(kind, "write"))) return deny();
+  if (
+    !["sys-cancel", "sys-reset"].includes(action) &&
+    (!checkSession() || !can(kind, "write"))
+  )
+    return deny();
   if (
     kind === "users" &&
     ["sys-assignment-add", "sys-assignment-remove"].includes(action)
@@ -1811,9 +2139,11 @@ async function systemAction(action, b) {
     return;
   }
   render();
-  if (demoSession.authenticated && routeAccess() && route() !== "select-unit") toast("設定已更新", "success");
+  if (demoSession.authenticated && routeAccess() && route() !== "select-unit")
+    toast("設定已更新", "success");
 }
 
+// ── 啟動與跨分頁同步 ──────────────────────────────────────────
 projectUnit = enteredUnit();
 systemUnit = enteredUnit();
 if (/^(members|stats)/.test(route())) limit = 10;
@@ -1822,22 +2152,37 @@ render();
 installElementUI();
 
 document.addEventListener("click", (event) => {
-  document.querySelectorAll(".account-menu[open]").forEach((menu) => { if (!menu.contains(event.target)) menu.open = false; });
+  document.querySelectorAll(".account-menu[open]").forEach((menu) => {
+    if (!menu.contains(event.target)) menu.open = false;
+  });
 });
 document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape") document.querySelectorAll(".account-menu[open]").forEach((menu) => { menu.open = false; menu.querySelector("summary").focus(); });
+  if (event.key === "Escape")
+    document.querySelectorAll(".account-menu[open]").forEach((menu) => {
+      menu.open = false;
+      menu.querySelector("summary").focus();
+    });
 });
+// 其他分頁變更管理資料時，重查 session 並移除可能已失效的編輯內容。
 window.addEventListener("storage", (event) => {
   if (event.key === null) return endSession("管理資料已清除，請重新登入。");
   if (!["o2o-system", "o2o-projects"].includes(event.key)) return;
   try {
     if (event.key === "o2o-system") {
       const data = JSON.parse(event.newValue);
-      if (!data || !Array.isArray(data.users) || !Array.isArray(data.roles) || !Array.isArray(data.units)) return endSession("管理資料已變更，請重新登入。");
+      if (
+        !data ||
+        !Array.isArray(data.users) ||
+        !Array.isArray(data.roles) ||
+        !Array.isArray(data.units)
+      )
+        return endSession("管理資料已變更，請重新登入。");
       systemData = data;
       if (migrateAdminScope(systemData)) persistSystem();
     } else projects = JSON.parse(event.newValue) || [];
     if ($("#system-modal")) closeSystemModal();
     render();
-  } catch { endSession("管理資料無法讀取，請重新登入。"); }
+  } catch {
+    endSession("管理資料無法讀取，請重新登入。");
+  }
 });
