@@ -1392,7 +1392,7 @@ const userTableRows = (user, index) => {
       return esc(role?.name || "未指派");
     })
     .join("<br>");
-  return `<tr class="user-assignment-row ${index % 2 ? "user-row-even" : "user-row-odd"}"><td>${esc(user.id)}</td><td><a href="#system/users" class="user-name-link" data-action="sys-edit" data-id="${user.id}" aria-haspopup="dialog">${esc(user.name)}</a></td><td>${esc(user.email)}</td><td class="user-unit">${units}</td><td class="user-unit-role">${roles}</td><td>${sysStatus(user.enabled)}</td></tr>`;
+  return `<tr class="user-assignment-row ${index % 2 ? "user-row-even" : "user-row-odd"}"><td>${esc(user.id)}</td><td>${esc(user.name)}</td><td>${esc(user.email)}</td><td class="user-unit">${units}</td><td class="user-unit-role">${roles}</td><td>${sysStatus(user.enabled)}</td><td>${sysEditButton("users", user)}</td></tr>`;
 };
 for (const role of systemData.roles) {
   // These capabilities are available to everyone who can access their page.
@@ -1485,6 +1485,8 @@ function systemNavigation() {
 }
 const sysButton = (label, action, id = "", extra = "") =>
   `<button type="button" data-action="sys-${action}" data-id="${esc(id)}" ${extra}>${label}</button>`;
+const sysEditButton = (kind, record) =>
+  sysButton("編輯", "edit", record.id, `aria-haspopup="dialog" ${can(kind, "write") && systemRecordAccess(kind, record, "write") ? "" : "disabled"}`);
 const sysStatus = (enabled) =>
   `<span class="status-tag ${enabled ? "on" : "off"}">${enabled ? "啟用" : "停用"}</span>`;
 function systemPage() {
@@ -1542,9 +1544,9 @@ function systemPage() {
         .join("")}</select>`
     : "";
   const headers = {
-    users: ["編號", "姓名", "Email", "單位", "單位角色", "狀態"],
-    roles: ["編號", "角色名稱", "單位", "說明", "狀態"],
-    projects: ["編號", "單位名稱", "狀態"],
+    users: ["編號", "姓名", "Email", "單位", "單位角色", "狀態", "操作"],
+    roles: ["編號", "角色名稱", "單位", "說明", "狀態", "操作"],
+    projects: ["編號", "單位名稱", "狀態", "操作"],
   };
   shell(
     `<section class="panel system-panel"><div class="toolbar">${can(kind, "write") ? sysButton("新增", "new", "", 'class="primary"') : ""}<div class="spacer"></div><form id="system-filter">${unitFilter}${statusFilter}<input name="query" aria-label="${kind === "users" ? "搜尋姓名或 Email" : "搜尋管理資料"}" placeholder="${kind === "users" ? "請輸入姓名或 Email" : kind === "roles" ? "請輸入角色名稱" : kind === "projects" ? "請輸入單位名稱" : "搜尋名稱、帳號或單位"}" value="${esc(systemQuery)}"><button type="submit" class="round search-icon" aria-label="查詢" title="查詢">${icon("search")}</button>${sysButton(icon("rotate-cw"), "reset", "", 'class="round search-icon" aria-label="重設搜尋" title="重設搜尋"')}</form></div>${pager(filtered.length)}<div class="table-scroll"><table class="system-table system-table--${kind}"><thead><tr>${headers[kind].map((h) => `<th scope="col">${h}</th>`).join("")}</tr></thead><tbody>${
@@ -1555,15 +1557,17 @@ function systemPage() {
             kind === "roles"
               ? [
                   x.id,
-                  `<a href="#system/roles" data-action="sys-edit" data-id="${x.id}" aria-haspopup="dialog">${esc(x.name)}</a>`,
+                  `${esc(x.name)}`,
                   x.unit === ALL_UNITS ? "全部單位" : esc(x.unit),
                   `${esc(x.description)}${x.id !== 1 && x.unit === ALL_UNITS ? '<p class="field-error">失效：一般角色不可屬於全部單位，請修正。</p>' : ""}`,
                   sysStatus(x.enabled),
+                  sysEditButton(kind, x),
                 ]
               : [
                   x.id,
-                  `<a href="#system/projects" data-action="sys-edit" data-id="${x.id}" aria-haspopup="dialog">${esc(x.name)}</a>`,
+                  `${esc(x.name)}`,
                   sysStatus(x.enabled !== false),
+                  sysEditButton(kind, x),
                 ];
           return `<tr>${cells.map((c) => `<td>${c}</td>`).join("")}</tr>`;
         })
